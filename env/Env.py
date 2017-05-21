@@ -1,4 +1,5 @@
-from Persistence import Persistence
+from env.Persistence import Persistence
+from Test.tData import TestData
 
 class Env(object):
     E = None
@@ -20,6 +21,7 @@ class Env(object):
         self.persistence = Persistence.startup(self.config)
         #todo self.log = new log and init
         self.appStart()
+        return self
 
     def stop(self):
         self.persistence.shutdown()
@@ -36,6 +38,6 @@ class Env(object):
     def appStart(self):
         if self.config.has_option("Application", "class") :
             nm = self.config.get("Application", "class")
-            obj = globals()[nm]
-            self.app = obj.start
-
+            if nm:
+                obj = globals()[nm]
+                obj.startup(obj)

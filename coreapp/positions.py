@@ -1,4 +1,4 @@
-class Position():
+class Position(object):
 
     def __init__(self):
         self.id = None
@@ -13,10 +13,16 @@ class Position():
         self.instrument = ''            # ('stock', 'call', 'put')
         self.trade = 0
         self.account = ''
+        self.baseString = self.getBaseString()
 
-    def baseString(self):
-        """ Return identity string, except for date and quantity"""
-        return self.symbol  # construct self identity
+    def getBaseString(self):
+        if not self.baseString:
+            self.baseString = self.symbol
+        return self.baseString
+
+    def baseEquals(self, pos):
+        """ Compares self to an other position, except for date and quantity"""
+        return self.getBaseString() == pos.getBaseString()
 
     def addQty(self, pos):
         self.quantity += pos.quantity
@@ -28,22 +34,22 @@ class Position():
         return self.net
 
     def setTrade(self,tr):
-        self.trade = tr
-        # mark for update
+        if tr.trade != tr:
+            self.trade = tr
+            # todo: mark for update
+
+    def matchDate(self,date):
+        return self.td == date
 
 class Option(Position):
     """ """
     def __init__(self):
-        super(self).__init__()
+        super().__init__()
         self.removal = False        #True/False
         self.expiration = None
         self.strike = 0.0
 
-    def baseString(self):
-        """ Return identity string, except for date and quantity"""
-        str = self.super().baseString()
-        if self.removal:
-            str += " removal"
-        else:
-            str += " " + self.instrument + " $" + self.strike + " @" + self.expiration
-        return str
+    def getBaseString(self):
+        if not self.baseString:
+            self.baseString = self.symbol + self.instrument + self.expiration.strfdate('%m/%d/%Y') + str(self.strike)
+        return self.baseString

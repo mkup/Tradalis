@@ -57,7 +57,7 @@ class TDA(Vendor):
                 data.append(act)
                 data.insert(0,0)        # id placeholder, it will be skipped by DB_table.insert()
                 inst.setData(data)
-                inst.insert( )
+                inst.insert()
         inst.db.commit( )
 
     def needsLoad(self, data):

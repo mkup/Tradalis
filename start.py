@@ -1,6 +1,6 @@
 import configparser
 
-from env import Env
+from env.Env import Env
 
 #  read configuration file
 conf = configparser.RawConfigParser()
