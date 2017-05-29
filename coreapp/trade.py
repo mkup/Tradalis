@@ -1,22 +1,35 @@
 import copy
+from decimal import Decimal
+from env.Persistence import Persistence
 
 
 class Trade(object):
     def __init__(self):
         self.id = 0
-        self.acct = ''  # account nick (for now)
+        self.account = ''  # account nick (for now)
         self.tranCol = []  # Collection of transactions, uncompressed
         self.posCol = []  # Compressed collection of transaction COPIES
         self.description = ''
         self.symbol = ''  # Derived from the first added transaction
         self.long_short = ''  # ('LONG', 'SHORT') - derived from Spread
-        self.open_close = 'PLAN'  # ('OPEN', 'CLOSED', 'PLAN')
+        self.open_closed = 'PLAN'  # ('OPEN', 'CLOSED', 'PLAN')
         self.dateOpen = None  # Derived from Spread
         self.dateClose = None  # Derived from Spread
-        self.risk = 0.0  # Trade initial exposure, derived from Spread
-        self.net = 0.0  # Derived from Spread
+        self.risk = Decimal(0.00)  # Trade initial exposure, derived from Spread
+        self.net = Decimal(0.00)  # Derived from Spread
         self.spread = None
+        self.strategy = ''
         self.mgmt = None
+
+    def getDescription(self):
+        if not self.description:
+            sep = ' '
+            ar = [type(self).__name__, str(self.id), self.open_closed, self.symbol, str(len(self.posCol)), 'positions']
+            self.description = sep.join(ar)
+        return self.description
+
+    def __repr__(self):
+        return self.getDescription()
 
     #   Structural methods
     def getRisk(self):
@@ -33,10 +46,14 @@ class Trade(object):
 
     #   Application methods
     def belong(self, tran):
-        if (not tran) or not self.acct == tran.account or not self.matchSymbol(tran):
+        if not tran:
+            ret = False
+        elif not self.tranCol:
+            ret = True
+        elif not self.account == tran.account or not self.matchSymbol(tran):
             ret = False
         else:
-            ret = self.matchPos(tran) or self.isComplement(tran)
+            ret = self.matchPos(tran) is not None or self.isComplement(tran)
         return ret
 
     def matchPos(self, tran):
@@ -56,26 +73,30 @@ class Trade(object):
         # todo: it should be spread's responsibility to answer this question, but later...
         return t and t.matchDate(self.dateOpen)
 
-    def addTrans(self, trans):
+    def addTransaction(self, t):
         """"""
         new = False  # new position indicator
-        for t in trans:
-            self.appendTran(t)
-            t.setTrade(self)
-            i = self.matchPos(t)
-            if i:
-                self.posCol[i].addQty(t)
-            else:
-                self.posCol.append(copy.copy(t))  # add a COPY of tran to the posCol
-                new = True
-            self.net += t.getNet()
+        self.appendTran(t)
+        t.setTrade(self)
+        i = self.matchPos(t)
+        if i is None:
+            self.posCol.append(copy.copy(t))  # add a COPY of tran to the posCol
+            new = True
+        else:
+            self.posCol[i].addQty(t)
+        self.net += t.getNet()
         if new:
             # todo: invoke Spread logic for NEW positions
             pass
         else:
             # todo: invoke Spread logic for EXISTING position
             pass
-            # mark for update
+            Persistence.p.update(self)
+
+    def addTrans(self, trans):
+        if trans:
+            for t in trans:
+                self.addTransaction(t)
 
     def rmTrans(self, trans):
         """"""
@@ -107,24 +128,24 @@ class Trade(object):
             return False
 
     def isReal(self):
-        return not self.open_close == "PLAN"
+        return not self.open_closed == "PLAN"
 
     def appendTran(self, t):
         if not self.tranCol or t.dt < self.tranCol[0].dt:
             self.tranCol.insert(0, t)
-            self.acct = t.acct
+            self.account = t.account
             self.dateOpen = t.dt
             self.symbol = t.symbol
         else:
             self.tranCol.append(t)
 
     def clear(self):
-        self.acct = ''
+        self.account = ''
         self.symbol = ''
         self.spread = None
         self.tranCol[:] = []
         self.posCol[:] = []
-        # todo: mark for Delete
+        Persistence.P.delete(self)
 
 # todo code Spread class
 class Spread(object):
@@ -132,12 +153,14 @@ class Spread(object):
     def __init__(self):
         pass
 
+    def display(self):
+        return "Spread"
+
 # todo code TradeManagement class
 class TradeMgmt(object):
     def __init__(self, tr):
         self.trade = tr
         self.symbol = tr.getSymbol()  # Derived from positions
-        self.strategy = ''
         self.verdict = ''  # notes on trade outcome
         self.outcome = ''  # Formal outcome for analysis
         self.underPriceOpen = 0.0  # Open underlying price

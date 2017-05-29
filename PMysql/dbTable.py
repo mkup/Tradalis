@@ -43,12 +43,11 @@ class DB_table(object):
         cursor.close()
         return col
 
-
     def insert(self):
         comma = ', '
         nm = self.getNames()
         dt = self.getData()
-        if "id" in self.names:  # skip `id` - auto-increment field
+        if self.getData()[0] == "id":  # skip `id` - auto-increment field
             nm = nm[1:]
             dt = dt[1:]
         sql = "Insert into " + self.tname + " (" + \
@@ -60,8 +59,27 @@ class DB_table(object):
         cursor.close()
         return i
 
-    def update(self, sql):
-        pass
+    def update(self):
+        comma = ', '
+        nm = self.getNames()
+        dt = self.getData()
+        if "id" in self.names:  # skip `id` - auto-increment field
+            nm = nm[1:]
+            dt = dt[1:]
+        sql = "Update " + self.tname + " Set "
+        for i in range(len(nm)):
+            sql += nm[i] + ' = ' + repr(dt[i]) + ', '
+        sql = sql[:-2]                            # remove last comma
+        sql += " where id = " + str(self.getData()[0])
+        cursor = self.db.connection.cursor()
+        cursor.execute(sql)
+        cursor.close()
+
+    @staticmethod
+    def execute(sql):
+        cursor = Persistence.P.connection.cursor()
+        cursor.execute(sql)
+        cursor.close()
 
 
 

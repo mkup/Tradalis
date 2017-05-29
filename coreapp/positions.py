@@ -1,3 +1,6 @@
+from decimal import Decimal
+from env.Persistence import Persistence
+
 class Position(object):
 
     def __init__(self):
@@ -7,13 +10,17 @@ class Position(object):
         self.quantity = 0              # Sign either here or in price
         self.origQty = 0              # Sign either here or in price
         self.symbol = ''
-        self.price = 0.0
-        self.comm = 0.0
-        self.net = 0.0
+        self.price = Decimal(0.00)
+        self.comm = Decimal(0.00)
+        self.net = Decimal(0.00)
         self.instrument = ''            # ('stock', 'call', 'put')
         self.trade = 0
         self.account = ''
-        self.baseString = self.getBaseString()
+        self.baseString = None
+
+    def __repr__(self):
+        return type(self).__name__ + ' '+ str(self.quantity) + '@' + \
+               self.dt.strftime('%m/%d/%Y') + ': ' + self.getBaseString()
 
     def getBaseString(self):
         if not self.baseString:
@@ -34,12 +41,12 @@ class Position(object):
         return self.net
 
     def setTrade(self,tr):
-        if tr.trade != tr:
+        if self.trade != tr:
             self.trade = tr
-            # todo: mark for update
+            Persistence.P.update(self)
 
     def matchDate(self,date):
-        return self.td == date
+        return self.dt == date
 
 class Option(Position):
     """ """
@@ -51,5 +58,5 @@ class Option(Position):
 
     def getBaseString(self):
         if not self.baseString:
-            self.baseString = self.symbol + self.instrument + self.expiration.strfdate('%m/%d/%Y') + str(self.strike)
+            self.baseString = self.symbol + self.instrument + self.expiration.strftime('%m/%d/%Y') + str(self.strike)
         return self.baseString

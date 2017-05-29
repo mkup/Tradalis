@@ -28,16 +28,17 @@ Create Table IF NOT EXISTS Trade (
 	dt_open date default NULL,		        # calculated by the application
 	dt_close date default NULL,		        # calculated by the application
 	risk numeric(15,2) default 0.00,		# calculated by the application
-	net numeric(15,2) default 0.00          # calculated by the application
+	net numeric(15,2) default 0.00,          # calculated by the application
 	spread varchar(10),
 	strategy varchar(10),
 	outcome varchar(10) default NULL,
-	verdict varchar(200) default NULL,
+	verdict varchar(200) default NULL
 	)
 ;
 
 # Table Strategy
 Create Table IF NOT EXISTS Strategy (
+	id int auto_increment Primary Key,
 	cde varchar(10) not null,
 	description varchar(50)
 	)
@@ -45,6 +46,7 @@ Create Table IF NOT EXISTS Strategy (
 
 # Table Outcome
 Create Table IF NOT EXISTS Outcome (
+	id int auto_increment Primary Key,
 	cde varchar(10) not null,
 	description varchar(50)
 	)

@@ -1,5 +1,5 @@
 from env.Persistence import Persistence
-from Test.tData import TestData
+from test.tData import TestData
 
 class Env(object):
     E = None

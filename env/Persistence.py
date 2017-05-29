@@ -1,6 +1,4 @@
-# todo: Implement transactional collections logic - Insert, Update, Delete
 # todo: Implement CommitTransaction, CancelTransaction logic
-# todo: Marshaling-Unmarshaling interfaces
 import importlib
 
 class Persistence(object):
@@ -23,9 +21,11 @@ class Persistence(object):
         Persistence.P = None
 
     def __init__(self):
-        self.cache = None                             # Data tree
-        self.change = {'i':[],'d':[],'u':[]}          # changes
         self.retriever = None                         # Data Retriever - needs to be implemented by subclasses
         self.mapper = None                            # Data Mapper  - needs to be implemented by subclasses
         self.completeInit()                           # subclass functionality
+
+    def commit(self):
+        pass
+
 

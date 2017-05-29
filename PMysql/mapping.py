@@ -2,8 +2,10 @@
 
 from coreapp.positions import Position, Option
 from coreapp.trade import Trade
+from coreapp.dict import Dict
 from env.Persistence import Persistence
 from PMysql.dbTrade import DB_trade
+from PMysql.dbDic import DB_dic
 
 
 # noinspection PyMethodMayBeStatic
@@ -32,18 +34,35 @@ class Map(object):
         o.account = tran.get('acct')
         return o
 
-    def unmarshalTrade(self, tr):
+    def unmarshalTrade(self, dbTr):
         """" Translate DB_trade record to Trade object """
         trade = Trade()
-        trade.id = tr.id
-        trade.acct = tr.acct
-        trade.addTrans(Persistence.P.getter.getTransactions(tr.acct, tr.id, 'dt, instrument, expiration, strike'))
+        trade.id = dbTr.getData()[0]
+        trade.account = dbTr.getData()[1]
+        trade.strategy = dbTr.getData()[11]
+        # addTran() populates all the derived attributes
+        trade.addTrans(Persistence.P.retriever.getTransactions(trade.account, trade.id, 'dt, instrument, expiration, strike'))
         return trade
 
     def marshalTrade(self, trade):
         """convert Trade to DB_trade"""
-
-        data = [trade.id, trade.acct, trade.description, trade.symbol, trade.long_short, trade.open_close,
-                trade.dateOpen, trade.dateClose, trade.risk, trade.net, trade.spread.display()]
+        # todo:  use in the data - trade.spread.display() in place of Spread
+        data = [trade.id, trade.account, trade.description, trade.symbol, trade.long_short, trade.open_closed,
+                str(trade.dateOpen), str(trade.dateClose), str(trade.risk), str(trade.net), 'Spread', '', '', '']
         dbTr = DB_trade(data)
         return dbTr
+
+    def marshalDic(self, d):
+        data = [d.id, d.cde, d.description, d.valid]
+        dbD = DB_dic()
+        dbD.tname = d.name
+        return dbD
+
+    def unmarshalDic(self, dbD):
+        d = Dict()
+        d.id = dbD[0]
+        d.name = dbD.tname
+        d.cde = dbD[1]
+        d.description = dbD[2]
+        d.active = dbD[3]
+        return d
