@@ -13,11 +13,11 @@ def env():
 def test_groupSingles(env):
     g = TradeGroup('cash')
     g.groupSingles()
-    assert(g.props)
     print()
     for p in g.props:
-        print(repr(p.trade))
+        p.trade.calculateSpread()
+        print(p.trade)
         for t in p.trans:
-            print(repr(t))
+            print(t)
         print()
     assert 0

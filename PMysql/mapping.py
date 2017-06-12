@@ -1,5 +1,3 @@
-# todo: code and reorganize marshal/un-marshal for Trades and Dictionaries
-
 from coreapp.positions import Position, Option
 from coreapp.trade import Trade
 from coreapp.dict import Dict
@@ -15,7 +13,7 @@ class Map(object):
 
         if tran.get('instrument') in ('call', 'put'):
             o = Option()
-            o.removal = tran.get('description').startswith("Removal")
+            o.removal = tran.get('description').startswith("REMOVAL")
             o.expiration = tran.get('expiration')
             o.strike = tran.get('strike')
         else:
@@ -23,15 +21,18 @@ class Map(object):
         o.id = tran.get('id')
         o.vendorId = tran.get('vendorId')
         o.dt = tran.get('dt')
-        o.quantity = tran.get('quantity')
         o.origQty = tran.get('quantity')
+        o.quantity = o.origQty
         o.symbol = tran.get('symbol')
-        o.price = tran.get('price')
+        o.price = abs(tran.get('price'))
         o.comm = tran.get('commission')
         o.net = tran.get('net_cash') + o.comm
         o.instrument = tran.get('instrument')
         o.trade = tran.get('trade')
         o.account = tran.get('acct')
+        if o.net > 0:                       # fix the sign of the quantity
+            o.origQty = 0 - o.origQty       # short position - negative quantity
+            o.quantity = o.origQty
         return o
 
     def unmarshalTrade(self, dbTr):
@@ -46,9 +47,8 @@ class Map(object):
 
     def marshalTrade(self, trade):
         """convert Trade to DB_trade"""
-        # todo:  use in the data - trade.spread.display() in place of Spread
         data = [trade.id, trade.account, trade.description, trade.symbol, trade.long_short, trade.open_closed,
-                str(trade.dateOpen), str(trade.dateClose), str(trade.risk), str(trade.net), 'Spread', '', '', '']
+                str(trade.dateOpen), str(trade.dateClose), str(trade.risk), str(trade.net), repr(trade.spread), '', '', '']
         dbTr = DB_trade(data)
         return dbTr
 

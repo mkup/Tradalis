@@ -11,7 +11,7 @@ class DB_Mysql(Persistence):
         super(DB_Mysql, self).__init__()
         self.conf = conf
         self.connection = self.connect()
-        self.changes = {'trade':{'i':[],'d':[],'u':[]}, 'tran':[]}    # only Update for Transactions, for now
+        self.changes = {'trade':{'d':[],'u':[]}, 'tran':[]}    # only Update for Transactions, for now
 
     def completeInit(self):
         self.retriever = Getter()
@@ -34,19 +34,19 @@ class DB_Mysql(Persistence):
         self.connection.close()
         
     def commit(self):
-        # insert Trade
-        for tr in self.changes['trade']['i']:
-            self.retriever.insertTrade(tr)
-        self.changes['trade']['i'] = []
 
-        # update Trade
+        # update/insert Trade
         for tr in self.changes['trade']['u']:
-            self.retriever.updateTrade(tr)
+            if tr.id:                   # Existing trade
+                self.retriever.updateTrade(tr)
+            else:
+                self.retriever.insertTrade(tr)
         self.changes['trade']['u'] = []
 
         # delete Trade
         for tr in self.changes['trade']['d']:
-            self.retriever.deleteTrade(tr)
+            if tr.id:               # if Trade is not new
+                self.retriever.deleteTrade(tr)
         self.changes['trade']['d'] = []
 
         # update Transaction
@@ -63,12 +63,6 @@ class DB_Mysql(Persistence):
             self.changes['trade']['u'].append(obj)
         elif type(obj).__name__ in ('Position', 'Option'):
             self.changes['tran'].append(obj)
-
-    def insert(self, obj):
-        if not obj:
-            pass
-        elif type(obj).__name__ == 'Trade':
-            self.changes['trade']['i'].append(obj)
 
     def delete(self, obj):
         if not obj:

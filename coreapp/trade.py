@@ -1,6 +1,7 @@
 import copy
 from decimal import Decimal
 from env.Persistence import Persistence
+from coreapp.spread import Spread
 
 
 class Trade(object):
@@ -12,7 +13,7 @@ class Trade(object):
         self.description = ''
         self.symbol = ''  # Derived from the first added transaction
         self.long_short = ''  # ('LONG', 'SHORT') - derived from Spread
-        self.open_closed = 'PLAN'  # ('OPEN', 'CLOSED', 'PLAN')
+        self.state = 'PLAN'  # ('OPEN', 'CLOSED', 'PLAN')
         self.dateOpen = None  # Derived from Spread
         self.dateClose = None  # Derived from Spread
         self.risk = Decimal(0.00)  # Trade initial exposure, derived from Spread
@@ -22,21 +23,17 @@ class Trade(object):
         self.mgmt = None
 
     def getDescription(self):
-        if not self.description:
-            sep = ' '
-            ar = [type(self).__name__, str(self.id), self.open_closed, self.symbol, str(len(self.posCol)), 'positions']
-            self.description = sep.join(ar)
+        sep = ' '
+        ar = [type(self).__name__, str(self.id), self.state, repr(self.spread)]
+        self.description = sep.join(ar)
         return self.description
 
     def __repr__(self):
         return self.getDescription()
 
     #   Structural methods
-    def getRisk(self):
-        return self.spread.getRisk()
-
     def getStrategy(self):
-        return self.mgmt.getStrategy()
+        return self.strategy
 
     def getVerdict(self):
         return self.mgmt.getVerdict()
@@ -85,18 +82,15 @@ class Trade(object):
         else:
             self.posCol[i].addQty(t)
         self.net += t.getNet()
-        if new:
-            # todo: invoke Spread logic for NEW positions
-            pass
-        else:
-            # todo: invoke Spread logic for EXISTING position
-            pass
-            Persistence.p.update(self)
+        return new
 
     def addTrans(self, trans):
+        new = False
         if trans:
             for t in trans:
-                self.addTransaction(t)
+                new = self.addTransaction(t) or new
+        if new:
+            self.spread = Spread.construct(self)
 
     def rmTrans(self, trans):
         """"""
@@ -112,14 +106,14 @@ class Trade(object):
                 else:
                     i = self.matchPos(t)
                     self.posCol[i].subtractQty(t)
-                    self.net -= t.getNet()
+                    self.net += t.getNet()
                     if self.posCol[i].quantity == 0:
                         # if removing an opening transaction, signal to recalculate the spread
                         del self.posCol[i]
                         recalc = True
         if recalc:
-            # todo: recalculate the spread
-            pass
+            # positions were removed - reconstruct the spread
+            self.calculateSpread()
 
     def matchSymbol(self, tran):
         if (self.symbol == '') or (self.symbol == tran.symbol):
@@ -128,7 +122,7 @@ class Trade(object):
             return False
 
     def isReal(self):
-        return not self.open_closed == "PLAN"
+        return not self.state == "PLAN"
 
     def appendTran(self, t):
         if not self.tranCol or t.dt < self.tranCol[0].dt:
@@ -147,14 +141,20 @@ class Trade(object):
         self.posCol[:] = []
         Persistence.P.delete(self)
 
-# todo code Spread class
-class Spread(object):
-    """"""
-    def __init__(self):
-        pass
+    def open(self):
+        if self.dateOpen:
+            self.state = 'OPEN'
 
-    def display(self):
-        return "Spread"
+    def close(self):
+        if self.dateClose:
+            self.state = 'CLOSED'
+
+    def isOpen(self):
+        return self.state == 'OPEN'
+
+    def calculateSpread(self):
+        self.spread = Spread.construct(self)
+
 
 # todo code TradeManagement class
 class TradeMgmt(object):

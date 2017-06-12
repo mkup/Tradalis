@@ -11,7 +11,7 @@ class TradeGroup(object):
         """Determine if the transaction(t) belongs to trade(tr) without altering the tr"""
         if tr.isReal():
             cp = Trade()
-            cp.open_close = tr.open_close
+            cp.state = tr.state
             cp.addTrans(tr.tranCol)
         else:
             cp = tr
@@ -36,6 +36,7 @@ class TradeGroup(object):
            Each proposal can add transactions to an Open trade, or open a new trade"""
         group = []
         propTrade = self.proposeTrade(group)
+        propTrade.symbol = self.singles[0].symbol
         itr = 0
         if self.openTrades:
             openTrade = self.openTrades[itr]
@@ -77,7 +78,7 @@ class TradeGroup(object):
     def proposeTrade(self, trans):
         trade = Trade()
         trade.account = self.account
-        trade.open_closed = "PLAN"
+        trade.state = "PLAN"
         if trans:
             trade.addTrans(trans)
         return trade
