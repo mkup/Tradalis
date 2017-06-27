@@ -19,7 +19,7 @@ class Position(object):
         self.baseString = None
 
     def __repr__(self):
-        return type(self).__name__ + ' '+ str(self.quantity) + '@' + \
+        return '(' + str(self.id) + ') ' + type(self).__name__ + ' ' + str(self.quantity) + '@' + \
                self.dt.strftime('%m/%d/%Y') + ': ' + self.getBaseString()
 
     def getBaseString(self):
@@ -45,13 +45,13 @@ class Position(object):
     def setTrade(self,tr):
         if self.trade != tr:
             self.trade = tr
-            Persistence.P.update(self)
 
     def matchDate(self,date):
         return self.dt == date
 
     def getFullString(self):
-        return ':'.join([self.symbol, self.dt.strftime('%Y/%m/%d'), self.instrument])
+
+        return ':'.join([self.symbol, self.dt.strftime('%Y/%m/%d'), '0000/00/00', self.instrument])
 
     def isStock(self):
         return self.instrument == 'stock'

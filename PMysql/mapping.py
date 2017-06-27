@@ -40,14 +40,15 @@ class Map(object):
         trade = Trade()
         trade.id = dbTr.getData()[0]
         trade.account = dbTr.getData()[1]
+        trade.state = dbTr.getData()[5]
         trade.strategy = dbTr.getData()[11]
         # addTran() populates all the derived attributes
-        trade.addTrans(Persistence.P.retriever.getTransactions(trade.account, trade.id, 'dt, instrument, expiration, strike'))
+        trade.addTrans(Persistence.P.retriever.getTransactions(trade.account, 'dt, instrument, expiration, strike', tradeId=trade.id))
         return trade
 
     def marshalTrade(self, trade):
         """convert Trade to DB_trade"""
-        data = [trade.id, trade.account, trade.description, trade.symbol, trade.long_short, trade.open_closed,
+        data = [trade.id, trade.account, trade.description, trade.symbol, trade.long_short, trade.state,
                 str(trade.dateOpen), str(trade.dateClose), str(trade.risk), str(trade.net), repr(trade.spread), '', '', '']
         dbTr = DB_trade(data)
         return dbTr

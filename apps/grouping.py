@@ -7,12 +7,12 @@ from coreapp.trade import Trade
 # noinspection PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming,PyPep8Naming
 class TradeGroup(object):
     @staticmethod
-    def tranBelong(tr, t):
+    def tranBelong(tr, lst, t):
         """Determine if the transaction(t) belongs to trade(tr) without altering the tr"""
         if tr.isReal():
             cp = Trade()
             cp.state = tr.state
-            cp.addTrans(tr.tranCol)
+            cp.addTrans(tr.tranCol+lst, False)
         else:
             cp = tr
         return cp.belong(t)
@@ -22,7 +22,7 @@ class TradeGroup(object):
         self.account = acct
         self.openTrades = self.getOpenTrades()
         self.singles = self.unAttachedTrans()  # collection of un-attached transactions
-        self.props = []
+
 
     def getOpenTrades(self):
         return self.getter.getOpenTrades(self.account)
@@ -45,34 +45,31 @@ class TradeGroup(object):
             trend = True
 
         for t in self.singles:
-            if TradeGroup.tranBelong(propTrade, t):
-                group.append(t)
-                if not propTrade.isReal():
-                    propTrade.addTransaction(t)
+            if propTrade.isReal():
+                if TradeGroup.tranBelong(propTrade, group, t):
+                    group.append(t)
+                else:
+                    self.addProposal(propTrade, group)
+                    group = [t]
+                    propTrade = self.proposeTrade(group)
             else:
-                self.addProposal(propTrade, group)
-                group = [t]
-                propTrade = self.proposeTrade(group)
-                if not trend:
-                    while not trend and t.symbol > openTrade.symbol:
-                        itr += 1
-                        if itr < len(self.openTrades):
-                            openTrade = self.openTrades[itr]
-                        else:
-                            trend = True
-                    # end-while
-                    if propTrade.isReal() or not TradeGroup.tranBelong(openTrade, t):
+                if not trend and TradeGroup.tranBelong(openTrade, group, t):
+                    self.addProposal(propTrade, group)
+                    group = [t]
+                    propTrade = openTrade
+                else:
+                    itr += 1
+                    if itr < len(self.openTrades):
+                        openTrade = self.openTrades[itr]
+                    else:
+                        trend = True
+                    if TradeGroup.tranBelong(propTrade, group, t):
+                        group.append(t)
+                        propTrade.addTransaction(t, False)
+                    else:
                         self.addProposal(propTrade, group)
                         group = [t]
                         propTrade = self.proposeTrade(group)
-                    else:
-                        propTrade = openTrade
-                        itr += 1
-                        openTrade = self.openTrades[itr]
-        # end of loop trough singles
-        if propTrade and group:
-            self.addProposal(propTrade, group)
-
     # end of groupSingles()
 
     def proposeTrade(self, trans):
@@ -80,9 +77,16 @@ class TradeGroup(object):
         trade.account = self.account
         trade.state = "PLAN"
         if trans:
-            trade.addTrans(trans)
+            trade.addTrans(trans, False)
         return trade
 
     def addProposal(self, trade, trans):
-        prop = Proposal(trade, trans)
-        self.props.append(prop)
+        if trade.tranCol:
+            Proposal.addProp(trade, trans)
+
+    def groupSymbol(self, sym, fr, to):
+        """Collect all existing trades and transactions for the Symbol within a the time period"""
+
+        trades = self.getter.getTrades(self.account, state=None, fr=fr, to=to, order='dt_open')
+        trans = self.unAttachedTrans()
+        return trades, trans

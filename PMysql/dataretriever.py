@@ -30,16 +30,23 @@ class Getter(object):
         if order:
             sql += ' order by ' + order
         tdCol = DB_table.select(sql)
-        tradeCol = [self.getMap().unmarshalTrade(DB_trade(tr)) for tr in tdCol]
-        return tradeCol
+        trades = []
+        for tdTr in tdCol:
+            tr = self.getMap().unmarshalTrade(DB_trade(tdTr))
+            trans = self.getTransactions(tr.account, "symbol, dt, instrument, expiration, strike", tradeId=tr.id)
+            for t in trans:
+                t.trade = tr            # to prevent t to be 'marked for update'
+            tr.addTrans(trans)
+            trades.append(tr)
+        return trades
 
-    def getTransactions(self, account, tradeId, order):
+    def getTransactions(self, account, order, tradeId=None):
         """Queries database for Transactions, converts it to positions, returns position collections
             Staggering, if necessary, should be implemented here"""
         # construct sql
         sql = "select * from Transaction where"
         sql += ' acct = "' + account + '"'
-        if tradeId:
+        if tradeId is not None:
             sql += ' and trade = ' + str(tradeId)
         if order:
             sql += ' order by ' + order
@@ -48,26 +55,22 @@ class Getter(object):
         return tranCol
 
     def getUnattachedTransactions(self, account):
-        return self.getTransactions(account, 0, "symbol, dt, instrument, expiration, strike")
+        return self.getTransactions(account, "symbol, dt, instrument, expiration, strike", tradeId=0)
 
     def getOpenTrades(self, account):
-        trades = self.getTrades(account, "OPEN",None,None,order="dt_open")
-        for tr in trades:
-            trans = self.getTransactions(tr.account, tr.id, "symbol, dt, instrument, expiration, strike")
-            tr.addTrans(trans)
-        return trades
+        return self.getTrades(account, "OPEN",None,None,order="symbol, dt_open")
 
     def insertTrade(self, tr):
         dbTr = self.getMap().marshalTrade(tr)
         i = dbTr.insert()
         tr.id = i
         for tran in [t for t in Persistence.P.changes['tran'] if t.trade == tr]:
-            self.updateTransaction(tran, i)
-            del Persistence.P.changes['tran'][tran]
+            self.updateTransaction(tran, tr)
+            Persistence.P.changes['tran'].remove(tran)
         return i
 
-    def updateTransaction(self,tran, i):
-        sql = "update Transaction set trade = " + str(tran.id) + " where id = " + str(i)
+    def updateTransaction(self,tran, trade):
+        sql = "update Transaction set trade = " + str(trade.id) + " where id = " + str(tran.id)
         DB_table.execute(sql)
 
     def deleteTrade(self, trade):

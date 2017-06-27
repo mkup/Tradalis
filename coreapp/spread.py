@@ -1,6 +1,3 @@
-# todo code Triple subclass
-# todo code Quad subclass
-# todo: display Spread qty
 import datetime
 import copy
 
@@ -77,6 +74,7 @@ class Spread(object):
         else:
             self.trade.dateClose = None
         self.trade.risk = self.getRisk()
+        self.trade.getDescription()
 
     def isLong(self):
         pass
@@ -107,6 +105,9 @@ class Spread(object):
         return ' '.join(
             [self.getType(), qtyStr, self.trade.symbol, self.getInstrument(), expStr, strikeStr, self.longShort()])
 
+    def isComplement(self, t):
+        """It's up to a specific spread class to implement this"""
+        return False
 
 # noinspection PyMethodMayBeStatic
 class Single(Spread):
@@ -119,9 +120,12 @@ class Single(Spread):
         return ' '.join([self.col[0].symbol, str(self.col[0].origQty), self.longShort()])
 
     def getInstrument(self):
-        s = self.col[0].instrument
+        if [t for t in self.col if t.isStock()]:
+            s = 'stock'
+        else:
+            s = self.col[0].instrument
         if len(self.col) > 1 and [p for p in self.col if p.isCall()]:  # that makes it Stock plus covered call
-            s += " + Covered Call"
+            s += " + options"
         return s
 
     def getRisk(self):
@@ -136,6 +140,15 @@ class Single(Spread):
     def isLong(self):
         return self.col[0].isLong()
 
+    def isComplement(self, t):
+        """This only makes sense for a Stock with Covered calls trade.
+            All other situations are covered by matching logic"""
+        if t.dt >= self.getOpen() and not self.isClosed() and \
+                ((self.getInstrument()[:5] == 'stock' and t.instrument == 'call') or \
+                         (self.getInstrument() == 'put' and t.instrument == 'stock')):
+            return True
+        else:
+            return False
 
 class Twos(Spread):
     """ Twos covers vertical, ratio, calendar, straddle and strangle spreads"""

@@ -1,7 +1,7 @@
 import copy
 from decimal import Decimal
-from env.Persistence import Persistence
 from coreapp.spread import Spread
+from env.Persistence import Persistence
 
 
 class Trade(object):
@@ -29,7 +29,7 @@ class Trade(object):
         return self.description
 
     def __repr__(self):
-        return self.getDescription()
+        return '(' + str(self.id) + ') ' + self.getDescription()
 
     #   Structural methods
     def getStrategy(self):
@@ -50,7 +50,8 @@ class Trade(object):
         elif not self.account == tran.account or not self.matchSymbol(tran):
             ret = False
         else:
-            ret = self.matchPos(tran) is not None or self.isComplement(tran)
+            ret = self.matchPos(tran) is not None or tran.matchDate(self.dateOpen) or \
+                    (self.spread and self.spread.isComplement(tran))
         return ret
 
     def matchPos(self, tran):
@@ -60,21 +61,18 @@ class Trade(object):
         match = None
         if tran:
             for i in range(len(self.posCol)):
-                if self.posCol[i].baseEquals(tran):
+                if self.posCol[i].quantity !=0 and self.posCol[i].baseEquals(tran):
                     match = i
                     break
         return match
 
-    def isComplement(self, t):
-        """See if the transaction belongs to the spread or the covered call pair"""
-        # todo: it should be spread's responsibility to answer this question, but later...
-        return t and t.matchDate(self.dateOpen)
-
-    def addTransaction(self, t):
-        """"""
+    def addTransaction(self, t, update=True):
+        """update=False, means that it's proposed assignment"""
         new = False  # new position indicator
         self.appendTran(t)
         t.setTrade(self)
+        if update:
+            Persistence.P.update(t)
         i = self.matchPos(t)
         if i is None:
             self.posCol.append(copy.copy(t))  # add a COPY of tran to the posCol
@@ -82,15 +80,13 @@ class Trade(object):
         else:
             self.posCol[i].addQty(t)
         self.net += t.getNet()
-        return new
+        if new:
+            self.calculateSpread()
 
-    def addTrans(self, trans):
-        new = False
+    def addTrans(self, trans, update=True):
         if trans:
             for t in trans:
-                new = self.addTransaction(t) or new
-        if new:
-            self.spread = Spread.construct(self)
+                self.addTransaction(t, update)
 
     def rmTrans(self, trans):
         """"""
@@ -100,6 +96,7 @@ class Trade(object):
             if l:
                 self.tranCol.remove(l[0])  # remove transaction
                 t.setTrade(None)
+                Persistence.P.cancel(t)
                 if not self.tranCol:
                     self.clear()  # if tranCol became empty, clear the trade and exit
                     return
@@ -139,7 +136,6 @@ class Trade(object):
         self.spread = None
         self.tranCol[:] = []
         self.posCol[:] = []
-        Persistence.P.delete(self)
 
     def open(self):
         if self.dateOpen:
@@ -167,3 +163,8 @@ class TradeMgmt(object):
         self.underPriceClose = 0.0  # Close underlying price
         self.dateOpen = tr.getDateOpen()  # Cached from Trade
         self.dateClose = tr.getDateCLose()  # Cached from Trade
+
+
+#            ret = (self.matchPos(tran) is not None) or \
+#                    tran.matchDate(self.dateOpen) or \
+#                        (self.spread and self.spread.isComplement(tran))

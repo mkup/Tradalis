@@ -51,10 +51,14 @@ class DB_Mysql(Persistence):
 
         # update Transaction
         for t in self.changes['tran']:
-            self.retriever.updateTranasaction(t)
+            self.retriever.updateTransaction(t, t.trade)
         self.changes['tran'] = []
 
         self.connection.commit()
+
+    def abort(self):
+        self.cancel()
+        self.connection.rollback()
 
     def update(self, obj):
         if not obj:
@@ -69,4 +73,8 @@ class DB_Mysql(Persistence):
             pass
         elif type(obj).__name__ == 'Trade':
             self.changes['trade']['d'].append(obj)
+
+    def cancel(self):
+        self.changes = {'trade':{'d':[],'u':[]}, 'tran':[]}    # only Update for Transactions, for now
+
 
