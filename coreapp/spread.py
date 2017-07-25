@@ -141,10 +141,10 @@ class Single(Spread):
         return self.col[0].isLong()
 
     def isComplement(self, t):
-        """This only makes sense for a Stock with Covered calls trade.
+        """This only makes sense for a Stock with Covered calls, exercised short put trades.
             All other situations are covered by matching logic"""
-        if t.dt >= self.getOpen() and not self.isClosed() and \
-                ((self.getInstrument()[:5] == 'stock' and t.instrument == 'call') or \
+        if t.dt >= self.getOpen() and \
+                ((self.getInstrument()[:5] == 'stock' and not self.isClosed()) or \
                          (self.getInstrument() == 'put' and t.instrument == 'stock')):
             return True
         else:

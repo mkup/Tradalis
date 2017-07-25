@@ -43,7 +43,7 @@ class Map(object):
         trade.state = dbTr.getData()[5]
         trade.strategy = dbTr.getData()[11]
         # addTran() populates all the derived attributes
-        trade.addTrans(Persistence.P.retriever.getTransactions(trade.account, 'dt, instrument, expiration, strike', tradeId=trade.id))
+        #trade.addTrans(Persistence.P.retriever.getTransactions(trade.account, None, 'dt, instrument, expiration, strike', tradeId=trade.id))
         return trade
 
     def marshalTrade(self, trade):

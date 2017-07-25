@@ -81,10 +81,7 @@ def group(act):
     r = 0
     print('Grouping unattached transactions for account - ' + act)
     for p in Proposal.Props:
-        p.trade.calculateSpread()
-        print(p.trade)
-        for t in p.trans:
-            print(t)
+        print(p)
         again = True
         while(again):
             ch = input('a - accept; r - skip; or stop : ')
@@ -122,16 +119,14 @@ def symbol(act, sym):
     transactions = tup[1]
     for tr in trades:
         print('------------')
-        print(tr)
-        for t in tr.transCol:
-            print(t)
-    print{'-- Unattached --'}
+        printTrade(tr)
+    print('--Unattached Transactions--')
     for t in transactions:
         print(t)
 
     print('-- Propose groupping --')
-    while():
-        ch = input('trade <trade ID> add <comma separated list of transactions>  OR  stop')
+    while(True):
+        ch = input('trade <trade ID> add <comma separated list of transactions>  OR  stop \n')
         if ch =='stop':
             print('Process Stopped')
             break
@@ -139,26 +134,24 @@ def symbol(act, sym):
         if not (w[0] == 'trade' and w[2] == 'add'):
             print('Incorrect instructions')
         else:
-            trade = next([tr for tr in trades if tr.id == int(w[1])], None)
+            trade = next((tr for tr in trades if tr.id == int(w[1])), None)
             if not trade:
                 print('Trade is not found: ' + w[1])
                 continue
             lst = w[3].split(',')
             trans = []
             for i in lst:
-                t = next([r for r in transactions if r.id == int(i)], None)
+                t = next((r for r in transactions if r.id == int(i)), None)
                 if t:
                     trans.append(t)
                 else:
                     print('Transaction is not found: ' + i)
                     trans = []
             if trans:
-                #Proposal(trade, trans).accept()
+                Proposal(trade, trans).accept()
+                e.persistence.commit()
                 print('---- Accepted ----')
-                print(trade)
-                for t in trans:
-                    print(t)
-
+                printTrade(trade)
 
 def env():
     import configparser
@@ -167,6 +160,11 @@ def env():
     conf.read('tradalis.conf')
     conf.remove_option("Application", "class")
     return Env(conf)
+
+def printTrade(trade):
+    print(trade)
+    for t in trade.tranCol:
+        print(t)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

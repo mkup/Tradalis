@@ -7,6 +7,10 @@ class Proposal(object):
 
     @classmethod
     def addProp(cls,trade, trans):
+        state = trade.isReal()
+        trade.calculateSpread()
+        if not state:
+            trade.setPlan()
         cls.Props.append(Proposal(trade, trans))
 
     def __init__(self, tr, trans):
@@ -19,7 +23,7 @@ class Proposal(object):
             self.trade.addTrans(self.trans, True)
         else:
             self.trade.open()
-            self.trade.calculateSpread()
+        self.trade.calculateSpread()
         Persistence.P.update(self.trade)
         [Persistence.P.update(t) for t in self.trans]
 
@@ -29,6 +33,10 @@ class Proposal(object):
 
     def __repr__(self):
         s = repr(self.trade) + '\n'
+        if self.trade.isReal():
+            for t in self.trans:
+                s += repr(t) + '\n'
+        s += "--- Add ---" + '\n'
         for t in self.trans:
             s += repr(t) + '\n'
         return s

@@ -43,16 +43,20 @@ class Trade(object):
 
     #   Application methods
     def belong(self, tran):
-        if not tran:
+        if not tran or not self.matchAccount(tran) or not self.matchSymbol(tran):
             ret = False
         elif not self.tranCol:
             ret = True
-        elif not self.account == tran.account or not self.matchSymbol(tran):
-            ret = False
         else:
             ret = self.matchPos(tran) is not None or tran.matchDate(self.dateOpen) or \
                     (self.spread and self.spread.isComplement(tran))
         return ret
+
+    def matchAccount(self, t):
+        return t and self.account == t.account
+
+    def matchSymbol(self, t):
+        return (self.symbol == '') or (self.symbol == t.symbol)
 
     def matchPos(self, tran):
         """ Determine if a similar transaction exists in the spread.
@@ -112,14 +116,11 @@ class Trade(object):
             # positions were removed - reconstruct the spread
             self.calculateSpread()
 
-    def matchSymbol(self, tran):
-        if (self.symbol == '') or (self.symbol == tran.symbol):
-            return True
-        else:
-            return False
-
     def isReal(self):
         return not self.state == "PLAN"
+
+    def setPlan(self):
+        self.state = 'PLAN'
 
     def appendTran(self, t):
         if not self.tranCol or t.dt < self.tranCol[0].dt:
